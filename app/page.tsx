@@ -4,9 +4,21 @@ import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Copy, Check, Play, Pause, RotateCcw } from 'lucide-react'
+import { Copy, Check, Play, Pause, RotateCcw, Clock } from 'lucide-react'
+import { cn } from "@/lib/utils"
 
-type PeriodValue = "5m" | "10m" | "15m" | "30m" | "1h" | "6h" | "12h" | "24h" | "2d" | "7d" | "30d"
+type PeriodValue =
+  | "5m"
+  | "10m"
+  | "15m"
+  | "30m"
+  | "1h"
+  | "6h"
+  | "12h"
+  | "24h"
+  | "2d"
+  | "7d"
+  | "30d"
 
 const PERIOD_OPTIONS: { value: PeriodValue; label: string }[] = [
   { value: "5m", label: "5 minutes" },
@@ -50,7 +62,7 @@ function pad2(n: number) {
 function getLocalTimeZoneAbbr(d: Date): string {
   try {
     const parts = new Intl.DateTimeFormat(undefined, { timeZoneName: "short" }).formatToParts(d)
-    const tz = parts.find(p => p.type === "timeZoneName")?.value
+    const tz = parts.find((p) => p.type === "timeZoneName")?.value
     return tz ?? ""
   } catch {
     return ""
@@ -92,9 +104,9 @@ function CopyButton({
     try {
       await navigator.clipboard.writeText(value)
       setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+      setTimeout(() => setCopied(false), 1200)
     } catch {
-      // no-op: clipboard might be blocked
+      // no-op
     }
   }
 
@@ -105,15 +117,35 @@ function CopyButton({
       size="icon"
       onClick={handleCopy}
       aria-label={ariaLabel}
-      className="shrink-0"
+      className="shrink-0 rounded-full border-neutral-200/80 bg-white/60 backdrop-blur hover:bg-white/80 dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:bg-neutral-900/80"
     >
       {copied ? (
-        <Check className="h-4 w-4" aria-hidden="true" />
+        <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
       ) : (
         <Copy className="h-4 w-4" aria-hidden="true" />
       )}
       <span className="sr-only">{ariaLabel}</span>
     </Button>
+  )
+}
+
+function StatusChip({ paused }: { paused: boolean }) {
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs",
+        "border-neutral-200 bg-white/70 text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-neutral-300"
+      )}
+      aria-live="polite"
+    >
+      <span
+        className={cn(
+          "h-2 w-2 rounded-full",
+          paused ? "bg-amber-500" : "bg-emerald-500"
+        )}
+      />
+      {paused ? "Paused" : "Live"}
+    </div>
   )
 }
 
@@ -124,7 +156,6 @@ export default function Page() {
 
   useEffect(() => {
     if (paused) return
-    // sync immediately on (re)start
     setNowSec(Math.floor(Date.now() / 1000))
     const id = setInterval(() => {
       setNowSec(Math.floor(Date.now() / 1000))
@@ -137,8 +168,8 @@ export default function Page() {
 
   const nowDate = new Date(nowSec * 1000)
   const futureDate = new Date(futureSec * 1000)
-  const nowAbbr = getLocalTimeZoneAbbr(nowDate)
-  const futureAbbr = getLocalTimeZoneAbbr(futureDate)
+  const nowAbbr = getLocalTimeZoneAbbr(nowDate) || "Local"
+  const futureAbbr = getLocalTimeZoneAbbr(futureDate) || "Local"
 
   const handlePause = () => setPaused(true)
   const handleResume = () => {
@@ -152,94 +183,162 @@ export default function Page() {
   }
 
   return (
-    <main className="min-h-dvh w-full flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl space-y-6">
-        <header className="text-center space-y-1">
-          <h1 className="text-2xl font-semibold">UNIX Time Helper</h1>
-          <p className="text-sm text-muted-foreground">
-            Shows the current UNIX timestamp and a future timestamp based on a selected period.
-          </p>
-        </header>
-
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button onClick={handlePause} variant="secondary" disabled={paused}>
-            <Pause className="h-4 w-4 mr-2" aria-hidden="true" />
-            Pause
-          </Button>
-          <Button onClick={handleResume} disabled={!paused}>
-            <Play className="h-4 w-4 mr-2" aria-hidden="true" />
-            Resume
-          </Button>
-          <Button onClick={handleReset} variant="outline">
-            <RotateCcw className="h-4 w-4 mr-2" aria-hidden="true" />
-            Reset
-          </Button>
+    <main
+      className={cn(
+        "min-h-dvh w-full",
+        "bg-gradient-to-b from-neutral-50 to-white dark:from-neutral-950 dark:to-neutral-950"
+      )}
+    >
+      <div className="mx-auto max-w-3xl px-4 py-10 md:py-16">
+        {/* Top bar */}
+        <div className="mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border bg-white/70 backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/60">
+              <Clock className="h-5 w-5 text-neutral-800 dark:text-neutral-200" aria-hidden="true" />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+                UNIX Time Helper
+              </h1>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                Clean, precise timestamps with future offsets.
+              </p>
+            </div>
+          </div>
+          <StatusChip paused={paused} />
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Current UNIX time</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="text-3xl font-mono tracking-tight" aria-live="polite" aria-atomic="true">
-                {nowSec}
-              </div>
-              <CopyButton value={String(nowSec)} ariaLabel="Copy current UNIX timestamp" />
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {nowAbbr || "Local"}: {formatLocal(nowSec)}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              UTC: {formatUTC(nowSec)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-4 md:grid-cols-[300px_1fr] items-start">
-          <div className="space-y-2">
-            <Label htmlFor="period">Select period to add</Label>
-            <select
-              id="period"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as PeriodValue)}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        {/* Toolbar */}
+        <div
+          className={cn(
+            "mb-6 grid items-center gap-3 rounded-2xl border p-3 sm:grid-cols-[1fr_auto] md:p-4",
+            "border-neutral-200 bg-white/60 backdrop-blur supports-[backdrop-filter]:bg-white/60",
+            "dark:border-neutral-800 dark:bg-neutral-900/50"
+          )}
+        >
+          <div className="grid gap-1.5 sm:grid-cols-[160px_1fr] sm:items-center">
+            <Label
+              htmlFor="period"
+              className="text-neutral-600 dark:text-neutral-300"
             >
-              {PERIOD_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <div className="text-xs text-muted-foreground">
-              Currently adding {addSeconds.toLocaleString()} seconds.
+              Add period
+            </Label>
+            <div className="relative">
+              <select
+                id="period"
+                value={period}
+                onChange={(e) => setPeriod(e.target.value as PeriodValue)}
+                className={cn(
+                  "h-10 w-full appearance-none rounded-xl border bg-transparent px-3 pr-9 text-sm",
+                  "border-neutral-200 text-neutral-900 shadow-sm ring-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300",
+                  "dark:border-neutral-800 dark:bg-transparent dark:text-neutral-100 dark:focus-visible:ring-neutral-700"
+                )}
+              >
+                {PERIOD_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-neutral-400">
+                {"▾"}
+              </div>
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Future UNIX time</CardTitle>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              onClick={handlePause}
+              variant="secondary"
+              disabled={paused}
+              className="rounded-full border border-neutral-200 bg-white/70 text-neutral-900 hover:bg-white dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-neutral-100"
+            >
+              <Pause className="mr-2 h-4 w-4" aria-hidden="true" />
+              Pause
+            </Button>
+            <Button
+              onClick={handleResume}
+              disabled={!paused}
+              className="rounded-full bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+            >
+              <Play className="mr-2 h-4 w-4" aria-hidden="true" />
+              Resume
+            </Button>
+            <Button
+              onClick={handleReset}
+              variant="outline"
+              className="rounded-full border-neutral-200 bg-white/70 hover:bg-white dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:bg-neutral-900"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
+              Reset
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card
+            className={cn(
+              "rounded-2xl border-neutral-200 bg-white/60 backdrop-blur supports-[backdrop-filter]:bg-white/60",
+              "dark:border-neutral-800 dark:bg-neutral-900/50"
+            )}
+          >
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                Now
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="text-3xl font-mono tracking-tight" aria-live="polite" aria-atomic="true">
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="text-3xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100">
+                  {nowSec}
+                </div>
+                <CopyButton value={String(nowSec)} ariaLabel="Copy current UNIX timestamp" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="text-sm text-neutral-600 dark:text-neutral-300">
+                  {nowAbbr}: {formatLocal(nowSec)}
+                </div>
+                <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                  UTC: {formatUTC(nowSec)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            className={cn(
+              "rounded-2xl border-neutral-200 bg-white/60 backdrop-blur supports-[backdrop-filter]:bg-white/60",
+              "dark:border-neutral-800 dark:bg-neutral-900/50"
+            )}
+          >
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                Future
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="text-3xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100">
                   {futureSec}
                 </div>
                 <CopyButton value={String(futureSec)} ariaLabel="Copy future UNIX timestamp" />
               </div>
-              <div className="text-sm text-muted-foreground">
-                {futureAbbr || "Local"}: {formatLocal(futureSec)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                UTC: {formatUTC(futureSec)}
+              <div className="space-y-1.5">
+                <div className="text-sm text-neutral-600 dark:text-neutral-300">
+                  {futureAbbr}: {formatLocal(futureSec)}
+                </div>
+                <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                  UTC: {formatUTC(futureSec)}
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <footer className="text-xs text-muted-foreground text-center">
-          UNIX timestamps shown here are in seconds since 1970-01-01 UTC.
-        </footer>
+        <p className="mt-6 text-center text-xs text-neutral-500 dark:text-neutral-500">
+          UNIX timestamps shown are seconds since 1970-01-01 (UTC).
+        </p>
       </div>
     </main>
   )

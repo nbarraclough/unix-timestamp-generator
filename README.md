@@ -1,30 +1,45 @@
-# Simple time calculator
+# UNIX Time Helper
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A tiny, clean tool to:
+- See the current UNIX timestamp (seconds)
+- Select a period to add (default: 24h) and see the future UNIX timestamp
+- Read both as formatted times in your timezone and UTC (YYYY-MM-DD HH:MM:SS)
+- Pause, resume, or reset the clock
+- Copy timestamps with one click
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/nick-barracloughs-projects/v0-simple-time-calculator)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/tmhOtShNj2x)
+This was created because figuring out reasonable timestamps for testing a scheduler was annoying, and most sites that came up were cluttered with ads. This app keeps it fast, simple, and ad-free.
 
-## Overview
+## How it works
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+- Updates the current time every second when Live.
+- Adds the selected period to compute a future timestamp.
+- Shows:
+  - Your local timezone abbreviation and a 24h formatted time
+  - UTC in the same format
+- Everything runs in the browser. No network calls or back end.
 
-## Deployment
+## UI elements
 
-Your project is live at:
+- Status chip
+  - Live or Paused indicator in the header.
+- Add period
+  - A dropdown to pick common durations like 5m, 1h, 24h, 7d, 30d.
+- Controls
+  - Pause: freeze the time at the current second
+  - Resume: continue ticking every second
+  - Reset: set the dropdown back to 24h and resume ticking
+- Now card
+  - Current UNIX timestamp with a copy button
+  - Your timezone abbreviation followed by the local 24h formatted time
+  - UTC formatted time
+- Future card
+  - Future UNIX timestamp and the same local and UTC formatted lines
 
-**[https://vercel.com/nick-barracloughs-projects/v0-simple-time-calculator](https://vercel.com/nick-barracloughs-projects/v0-simple-time-calculator)**
+## Tips
 
-## Build your app
+- Use the copy buttons to quickly grab raw UNIX timestamps for testing.
+- Edit the period options by changing the PERIOD_OPTIONS array in app/page.tsx.
 
-Continue building your app on:
+## Deploy or install
 
-**[https://v0.dev/chat/projects/tmhOtShNj2x](https://v0.dev/chat/projects/tmhOtShNj2x)**
-
-## How It Works
-
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+- Use the v0 Install or Deploy button in the preview to add this to your repo or deploy to Vercel.
