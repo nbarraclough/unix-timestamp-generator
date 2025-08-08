@@ -91,6 +91,26 @@ function formatUTC(sec: number) {
   return `${yyyy}-${mm}-${dd} ${HH}:${MM}:${SS}`
 }
 
+// Convert seconds -> value for <input type="datetime-local">
+function secToLocalInput(sec: number): string {
+  const d = new Date(sec * 1000)
+  const yyyy = d.getFullYear()
+  const mm = pad2(d.getMonth() + 1)
+  const dd = pad2(d.getDate())
+  const HH = pad2(d.getHours())
+  const MM = pad2(d.getMinutes())
+  const SS = pad2(d.getSeconds())
+  // datetime-local expects "YYYY-MM-DDTHH:MM[:SS]"
+  return `${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}`
+}
+
+// Convert value from <input type="datetime-local"> -> seconds
+function localInputToSec(value: string): number | null {
+  const ms = Date.parse(value) // treated as local time when no timezone suffix
+  if (Number.isNaN(ms)) return null
+  return Math.floor(ms / 1000)
+}
+
 function CopyButton({
   value,
   ariaLabel = "Copy to clipboard",
@@ -153,6 +173,12 @@ export default function Page() {
   const [nowSec, setNowSec] = useState<number>(() => Math.floor(Date.now() / 1000))
   const [period, setPeriod] = useState<PeriodValue>("24h")
   const [paused, setPaused] = useState(false)
+  const [nowInput, setNowInput] = useState<string>(() => secToLocalInput(Math.floor(Date.now() / 1000)))
+
+  // Keep input field in sync with nowSec
+  useEffect(() => {
+    setNowInput(secToLocalInput(nowSec))
+  }, [nowSec])
 
   useEffect(() => {
     if (paused) return
@@ -180,6 +206,22 @@ export default function Page() {
     setPeriod("24h")
     setPaused(false)
     setNowSec(Math.floor(Date.now() / 1000))
+  }
+
+  function handleNowInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value
+    setNowInput(v)
+    const sec = localInputToSec(v)
+    if (sec !== null) {
+      setPaused(true) // editing base time freezes the clock
+      setNowSec(sec)
+    }
+  }
+
+  function handleSetToCurrent() {
+    const sec = Math.floor(Date.now() / 1000)
+    setNowSec(sec)
+    setPaused(true) // keep frozen unless user resumes
   }
 
   return (
@@ -211,41 +253,77 @@ export default function Page() {
         {/* Toolbar */}
         <div
           className={cn(
-            "mb-6 grid items-center gap-3 rounded-2xl border p-3 sm:grid-cols-[1fr_auto] md:p-4",
+            "mb-6 grid items-center gap-4 rounded-2xl border p-4 sm:grid-cols-[1fr_auto]",
             "border-neutral-200 bg-white/60 backdrop-blur supports-[backdrop-filter]:bg-white/60",
             "dark:border-neutral-800 dark:bg-neutral-900/50"
           )}
         >
-          <div className="grid gap-1.5 sm:grid-cols-[160px_1fr] sm:items-center">
-            <Label
-              htmlFor="period"
-              className="text-neutral-600 dark:text-neutral-300"
-            >
-              Add period
-            </Label>
-            <div className="relative">
-              <select
-                id="period"
-                value={period}
-                onChange={(e) => setPeriod(e.target.value as PeriodValue)}
-                className={cn(
-                  "h-10 w-full appearance-none rounded-xl border bg-transparent px-3 pr-9 text-sm",
-                  "border-neutral-200 text-neutral-900 shadow-sm ring-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300",
-                  "dark:border-neutral-800 dark:bg-transparent dark:text-neutral-100 dark:focus-visible:ring-neutral-700"
-                )}
+          {/* Left: controls for period and base time */}
+          <div className="grid gap-4">
+            <div className="grid gap-2 sm:grid-cols-[160px_1fr] sm:items-center">
+              <Label
+                htmlFor="period"
+                className="text-neutral-600 dark:text-neutral-300"
               >
-                {PERIOD_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-neutral-400">
-                {"▾"}
+                Add period
+              </Label>
+              <div className="relative">
+                <select
+                  id="period"
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value as PeriodValue)}
+                  className={cn(
+                    "h-10 w-full appearance-none rounded-xl border bg-transparent px-3 pr-9 text-sm",
+                    "border-neutral-200 text-neutral-900 shadow-sm ring-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300",
+                    "dark:border-neutral-800 dark:bg-transparent dark:text-neutral-100 dark:focus-visible:ring-neutral-700"
+                  )}
+                >
+                  {PERIOD_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-neutral-400">
+                  {"▾"}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-[160px_1fr] sm:items-center">
+              <Label
+                htmlFor="base-time"
+                className="text-neutral-600 dark:text-neutral-300"
+              >
+                Base time
+              </Label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="base-time"
+                  type="datetime-local"
+                  step="1"
+                  value={nowInput}
+                  onChange={handleNowInputChange}
+                  className={cn(
+                    "h-10 w-full rounded-xl border bg-transparent px-3 text-sm",
+                    "border-neutral-200 text-neutral-900 shadow-sm ring-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300",
+                    "dark:border-neutral-800 dark:bg-transparent dark:text-neutral-100 dark:focus-visible:ring-neutral-700"
+                  )}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSetToCurrent}
+                  className="rounded-full border-neutral-200 bg-white/70 hover:bg-white dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:bg-neutral-900"
+                >
+                  Now
+                </Button>
               </div>
             </div>
           </div>
 
+          {/* Right: playback controls */}
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
               onClick={handlePause}
@@ -297,7 +375,7 @@ export default function Page() {
               </div>
               <div className="space-y-1.5">
                 <div className="text-sm text-neutral-600 dark:text-neutral-300">
-                  {nowAbbr}: {formatLocal(nowSec)}
+                  {getLocalTimeZoneAbbr(new Date(nowSec * 1000)) || "Local"}: {formatLocal(nowSec)}
                 </div>
                 <div className="text-sm text-neutral-500 dark:text-neutral-400">
                   UTC: {formatUTC(nowSec)}
@@ -326,7 +404,7 @@ export default function Page() {
               </div>
               <div className="space-y-1.5">
                 <div className="text-sm text-neutral-600 dark:text-neutral-300">
-                  {futureAbbr}: {formatLocal(futureSec)}
+                  {getLocalTimeZoneAbbr(new Date(futureSec * 1000)) || "Local"}: {formatLocal(futureSec)}
                 </div>
                 <div className="text-sm text-neutral-500 dark:text-neutral-400">
                   UTC: {formatUTC(futureSec)}
